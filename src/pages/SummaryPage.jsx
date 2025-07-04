@@ -64,7 +64,7 @@ export default function SummaryPage() {
         ← Inici
       </Link>
 
-      <h1 className="text-2xl font-bold mb-2 text-center">📊 Resum de despeses</h1>
+      <h1 className="text-2xl font-bold mb-2 text-center"> Resum de despeses</h1>
       <p className="text-center text-sm text-gray-500 mb-4">
         Resum de: <strong>{MONTHS[selectedMonth]} {selectedYear}</strong>
       </p>

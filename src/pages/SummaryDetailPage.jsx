@@ -2,10 +2,16 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getAllExpenses, getAllCategories } from "../firestoreHelpers";
 import LoadingScreen from "../components/LoadingScreen";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
 const MONTHS = [
   "Gener", "Febrer", "Març", "Abril", "Maig", "Juny",
   "Juliol", "Agost", "Setembre", "Octubre", "Novembre", "Desembre"
+];
+
+const COLORS = [
+  "#8884d8", "#82ca9d", "#ffc658", "#ff7f50", "#00c49f",
+  "#ffbb28", "#0088fe", "#ff6666", "#a28fd0", "#b0e57c"
 ];
 
 export default function SummaryDetailPage() {
@@ -56,6 +62,11 @@ export default function SummaryDetailPage() {
     totalPerSub[key] = (totalPerSub[key] || 0) + amt;
   });
 
+  const pieData = Object.entries(totalPerCat).map(([name, value]) => ({
+    name,
+    value
+  }));
+
   return (
     <div className="max-w-md mx-auto p-4">
       <button
@@ -74,6 +85,31 @@ export default function SummaryDetailPage() {
         <p className="text-gray-700">Total gastat:</p>
         <p className="text-3xl font-extrabold text-blue-700">{total.toFixed(2)} €</p>
       </div>
+
+      {pieData.length > 0 && (
+        <div className="w-full h-64 mb-6">
+          <ResponsiveContainer>
+            <PieChart>
+              <Pie
+                data={pieData}
+                dataKey="value"
+                nameKey="name"
+                outerRadius={90}
+                label={({ name, percent }) =>
+                  `${name} (${(percent * 100).toFixed(0)}%)`
+                }
+              >
+                {pieData.map((_, index) => (
+                  <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip
+                formatter={(value) => [`${value.toFixed(2)} €`, "Despesa"]}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       <div className="space-y-6">
         {categories.map((cat, i) => {
@@ -117,5 +153,3 @@ export default function SummaryDetailPage() {
     </div>
   );
 }
-
-

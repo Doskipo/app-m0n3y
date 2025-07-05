@@ -2,10 +2,23 @@ import { Link, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getAllExpenses, getAllCategories } from "../firestoreHelpers";
 import LoadingScreen from "../components/LoadingScreen";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
 const MONTHS = [
   "Gener", "Febrer", "Març", "Abril", "Maig", "Juny",
   "Juliol", "Agost", "Setembre", "Octubre", "Novembre", "Desembre"
+];
+
+const COLORS = [
+  "#8884d8", "#82ca9d", "#ffc658", "#ff7f50", "#00c49f", "#ffbb28", "#8dd1e1",
+  "#a4de6c", "#d0ed57", "#ffc0cb", "#d88884", "#b0c4de"
 ];
 
 export default function SummaryPage() {
@@ -55,6 +68,11 @@ export default function SummaryPage() {
     totalPerSub[key] = (totalPerSub[key] || 0) + amt;
   });
 
+  const pieData = Object.entries(totalPerCat).map(([name, value]) => ({
+    name,
+    value: parseFloat(value.toFixed(2))
+  }));
+
   return (
     <div className="max-w-md mx-auto p-4">
       <Link
@@ -64,7 +82,7 @@ export default function SummaryPage() {
         ← Inici
       </Link>
 
-      <h1 className="text-2xl font-bold mb-2 text-center"> Resum de despeses xaxi</h1>
+      <h1 className="text-2xl font-bold mb-2 text-center">Resum de despeses xaxi</h1>
       <p className="text-center text-sm text-gray-500 mb-4">
         Resum de: <strong>{MONTHS[selectedMonth]} {selectedYear}</strong>
       </p>
@@ -73,6 +91,29 @@ export default function SummaryPage() {
         <p className="text-gray-700">Total gastat:</p>
         <p className="text-3xl font-extrabold text-blue-700">{total.toFixed(2)} €</p>
       </div>
+
+      {pieData.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-center text-sm text-gray-500 mb-2">Distribució per categories</h2>
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie
+                data={pieData}
+                dataKey="value"
+                nameKey="name"
+                outerRadius={90}
+                label
+              >
+                {pieData.map((_, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value) => `${value.toFixed(2)} €`} />
+              <Legend layout="horizontal" verticalAlign="bottom" align="center" />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       <div className="space-y-6">
         {categories.map((cat, i) => {
@@ -116,5 +157,3 @@ export default function SummaryPage() {
     </div>
   );
 }
-
-

@@ -2,7 +2,14 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getAllExpenses, getAllCategories } from "../firestoreHelpers";
 import LoadingScreen from "../components/LoadingScreen";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 
 const MONTHS = [
   "Gener", "Febrer", "Març", "Abril", "Maig", "Juny",
@@ -10,8 +17,8 @@ const MONTHS = [
 ];
 
 const COLORS = [
-  "#8884d8", "#82ca9d", "#ffc658", "#ff7f50", "#00c49f",
-  "#ffbb28", "#0088fe", "#ff6666", "#a28fd0", "#b0e57c"
+  "#8884d8", "#82ca9d", "#ffc658", "#ff7f50", "#00c49f", "#ffbb28", "#8dd1e1",
+  "#a4de6c", "#d0ed57", "#ffc0cb", "#d88884", "#b0c4de"
 ];
 
 export default function SummaryDetailPage() {
@@ -64,7 +71,7 @@ export default function SummaryDetailPage() {
 
   const pieData = Object.entries(totalPerCat).map(([name, value]) => ({
     name,
-    value
+    value: parseFloat(value.toFixed(2))
   }));
 
   return (
@@ -86,32 +93,7 @@ export default function SummaryDetailPage() {
         <p className="text-3xl font-extrabold text-blue-700">{total.toFixed(2)} €</p>
       </div>
 
-      {pieData.length > 0 && (
-        <div className="w-full h-64 mb-6">
-          <ResponsiveContainer>
-            <PieChart>
-              <Pie
-                data={pieData}
-                dataKey="value"
-                nameKey="name"
-                outerRadius={90}
-                label={({ name, percent }) =>
-                  `${name} (${(percent * 100).toFixed(0)}%)`
-                }
-              >
-                {pieData.map((_, index) => (
-                  <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip
-                formatter={(value) => [`${value.toFixed(2)} €`, "Despesa"]}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
-      <div className="space-y-6">
+      <div className="space-y-6 mb-8">
         {categories.map((cat, i) => {
           const catTotal = totalPerCat[cat.name] || 0;
           const percentGlobal = total > 0 ? ((catTotal / total) * 100).toFixed(0) : "0";
@@ -150,6 +132,28 @@ export default function SummaryDetailPage() {
           );
         })}
       </div>
+
+      {pieData.length > 0 && (
+        <div className="mb-12">
+          <h2 className="text-center text-sm text-gray-500 mb-2">Distribució per categories</h2>
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie
+                data={pieData}
+                dataKey="value"
+                nameKey="name"
+                outerRadius={90}
+              >
+                {pieData.map((_, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value) => `${value.toFixed(2)} €`} />
+              <Legend layout="horizontal" verticalAlign="bottom" align="center" />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 }

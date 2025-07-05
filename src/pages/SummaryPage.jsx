@@ -7,8 +7,8 @@ import {
   Pie,
   Cell,
   Tooltip,
-  Legend,
   ResponsiveContainer,
+  Legend,
 } from "recharts";
 
 const MONTHS = [
@@ -92,30 +92,7 @@ export default function SummaryPage() {
         <p className="text-3xl font-extrabold text-blue-700">{total.toFixed(2)} €</p>
       </div>
 
-      {pieData.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-center text-sm text-gray-500 mb-2">Distribució per categories</h2>
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie
-                data={pieData}
-                dataKey="value"
-                nameKey="name"
-                outerRadius={90}
-                label
-              >
-                {pieData.map((_, i) => (
-                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value) => `${value.toFixed(2)} €`} />
-              <Legend layout="horizontal" verticalAlign="bottom" align="center" />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
-      <div className="space-y-6">
+      <div className="space-y-6 mb-8">
         {categories.map((cat, i) => {
           const catTotal = totalPerCat[cat.name] || 0;
           const percentGlobal = total > 0 ? ((catTotal / total) * 100).toFixed(0) : "0";
@@ -154,6 +131,28 @@ export default function SummaryPage() {
           );
         })}
       </div>
+
+      {pieData.length > 0 && (
+        <div className="mb-12">
+          <h2 className="text-center text-sm text-gray-500 mb-2">Distribució per categories</h2>
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie
+                data={pieData}
+                dataKey="value"
+                nameKey="name"
+                outerRadius={90}
+              >
+                {pieData.map((_, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value) => `${value.toFixed(2)} €`} />
+              <Legend layout="horizontal" verticalAlign="bottom" align="center" />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 }

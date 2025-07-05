@@ -6,6 +6,7 @@ import {
 } from "firebase/firestore";
 import ConfirmDialog from "../components/ConfirmDialog";
 import LoadingScreen from "../components/LoadingScreen";
+import useDarkMode from "../hooks/useDarkMode";
 
 export default function HomePage() {
   const [categories, setCategories] = useState([]);
@@ -13,6 +14,8 @@ export default function HomePage() {
   const [earnings, setEarnings] = useState([]);
   const [isEarning, setIsEarning] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [navOpen, setNavOpen] = useState(false);
+  const [darkMode, setDarkMode] = useDarkMode();
 
   const [form, setForm] = useState({
     name: "",
@@ -143,22 +146,45 @@ export default function HomePage() {
   if (loading) return <LoadingScreen />;
 
   return (
-    <div className="max-w-md mx-auto p-4 pb-40 relative">
+    <div className="max-w-md mx-auto p-4 pb-40 relative bg-white text-black dark:bg-gray-900 dark:text-white transition-colors min-h-screen">
       <ConfirmDialog open={confirmOpen} message={confirmMessage} onConfirm={onConfirm} onCancel={() => setConfirmOpen(false)} />
 
       <div className="flex justify-between items-center mb-4">
-        <Link to="/resum" className="bg-gray-200 px-3 py-1 rounded text-sm">📊 Aquest mes</Link>
+        <div className="relative">
+          <button
+            onClick={() => setNavOpen(!navOpen)}
+            className="text-xl p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+            title="Navegació"
+          >
+            📂
+          </button>
+          {navOpen && (
+            <div className="absolute top-12 left-0 bg-white dark:bg-gray-800 text-black dark:text-white shadow-md rounded p-3 z-10">
+              <Link to="/resum" className="block px-3 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">📊 Aquest mes</Link>
+              <Link to="/recap" className="block px-3 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">📅 Recap</Link>
+            </div>
+          )}
+        </div>
+
         <h1 className="text-2xl font-bold text-center">NECSE</h1>
-        <Link to="/recap" className="bg-gray-200 px-3 py-1 rounded text-sm">📅 Recap</Link>
+
+        <button
+          onClick={() => setDarkMode(!darkMode)}
+          className="text-xl p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+          title="Canviar tema"
+        >
+          {darkMode ? "☀️" : "🌙"}
+        </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white shadow p-4 rounded space-y-4">
+      {/* Formulari */}
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 shadow p-4 rounded space-y-4 transition-colors">
         <div className="flex gap-2">
-          <button type="button" onClick={() => setIsEarning(false)} className={`flex-1 py-1 rounded ${!isEarning ? 'bg-red-600 text-white' : 'bg-gray-200'}`}>Despesa</button>
-          <button type="button" onClick={() => setIsEarning(true)} className={`flex-1 py-1 rounded ${isEarning ? 'bg-green-600 text-white' : 'bg-gray-200'}`}>Guany</button>
+          <button type="button" onClick={() => setIsEarning(false)} className={`flex-1 py-1 rounded ${!isEarning ? 'bg-red-600 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>Despesa</button>
+          <button type="button" onClick={() => setIsEarning(true)} className={`flex-1 py-1 rounded ${isEarning ? 'bg-green-600 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>Guany</button>
         </div>
-        <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="Concepte" className="w-full p-2 border rounded" />
-        <input type="number" name="amount" value={form.amount} onChange={handleChange} placeholder="Import (€)" className="w-full p-2 border rounded" />
+        <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="Concepte" className="w-full p-2 border rounded bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700" />
+        <input type="number" name="amount" value={form.amount} onChange={handleChange} placeholder="Import (€)" className="w-full p-2 border rounded bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700" />
 
         {!isEarning && (
           <>
@@ -167,12 +193,12 @@ export default function HomePage() {
               const cat = e.target.value;
               const firstSub = categories.find(c => c.name === cat)?.subcategories[0] || "";
               setForm(prev => ({ ...prev, subcategory: firstSub }));
-            }} className="w-full p-2 border rounded">
+            }} className="w-full p-2 border rounded bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700">
               {categories.map((cat, i) => <option key={i} value={cat.name}>{cat.name}</option>)}
             </select>
 
             {subcategories.length > 0 && (
-              <select name="subcategory" value={form.subcategory} onChange={handleChange} className="w-full p-2 border rounded">
+              <select name="subcategory" value={form.subcategory} onChange={handleChange} className="w-full p-2 border rounded bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700">
                 {subcategories.map((sub, i) => <option key={i} value={sub}>{sub}</option>)}
               </select>
             )}
@@ -184,31 +210,34 @@ export default function HomePage() {
         </button>
       </form>
 
+      {/* Llistat d’elements */}
       <ul className="mt-6 space-y-2">
         {[...expenses.map(e => ({ ...e, type: "expense" })), ...earnings.map(e => ({ ...e, type: "earning" }))]
           .sort((a, b) => new Date(b.date) - new Date(a.date))
           .map(e => (
-            <li key={e.id} className={`p-3 rounded flex justify-between items-center ${e.type === "expense" ? "bg-red-100" : "bg-green-100"}`}>
+            <li key={e.id} className={`p-3 rounded flex justify-between items-center ${e.type === "expense" ? "bg-red-100 dark:bg-red-900" : "bg-green-100 dark:bg-green-900"}`}>
               <div>
                 <p className="font-medium">{e.name}</p>
-                {e.type === "expense" && <p className="text-sm text-gray-500">{e.category} {e.subcategory && `→ ${e.subcategory}`}</p>}
+                {e.type === "expense" && <p className="text-sm text-gray-500 dark:text-gray-300">{e.category} {e.subcategory && `→ ${e.subcategory}`}</p>}
                 <p className="text-xs text-gray-400">{new Date(e.date).toLocaleDateString("ca-ES")}</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className={`font-bold ${e.type === "expense" ? "text-red-800" : "text-green-800"}`}>{e.amount} €</span>
-                <button onClick={() => handleDelete(e.id, e.type === "expense" ? "expenses" : "earnings")} className="text-gray-700 hover:text-gray-900">🅧</button>
+                <button onClick={() => handleDelete(e.id, e.type === "expense" ? "expenses" : "earnings")} className="text-gray-700 hover:text-gray-900 dark:text-white dark:hover:text-gray-300">🅧</button>
               </div>
             </li>
           ))}
       </ul>
 
+      {/* Botó flotant per categories */}
       <button onClick={() => setShowCategoryEditor(!showCategoryEditor)} className="fixed bottom-6 right-6 bg-green-600 text-white w-12 h-12 rounded-full text-2xl shadow">+</button>
 
+      {/* Panell de categories */}
       {showCategoryEditor && (
-        <div className="fixed bottom-24 right-4 bg-white shadow-lg border rounded-lg p-4 w-72 z-10">
+        <div className="fixed bottom-24 right-4 bg-white dark:bg-gray-800 shadow-lg border dark:border-gray-700 rounded-lg p-4 w-72 z-10">
           <h2 className="text-lg font-bold mb-2">Gestió de categories</h2>
 
-          <select value={selectedCatName} onChange={(e) => setSelectedCatName(e.target.value)} className="w-full p-2 border rounded mb-3">
+          <select value={selectedCatName} onChange={(e) => setSelectedCatName(e.target.value)} className="w-full p-2 border rounded bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 mb-3">
             {categories.map((cat, i) => <option key={i} value={cat.name}>{cat.name}</option>)}
           </select>
 
@@ -219,7 +248,7 @@ export default function HomePage() {
           <button onClick={handleDeleteCategory} className="w-full bg-red-600 text-white py-2 rounded">🗑️ Eliminar categoria</button>
 
           {selectedCat?.subcategories.length > 0 && (
-            <select onChange={(e) => handleDeleteSubcategory(e.target.value)} defaultValue="" className="w-full mt-4 p-2 border rounded">
+            <select onChange={(e) => handleDeleteSubcategory(e.target.value)} defaultValue="" className="w-full mt-4 p-2 border rounded bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700">
               <option value="" disabled>Selecciona subcategoria per eliminar</option>
               {selectedCat.subcategories.map((sub, i) => <option key={i} value={sub}>{sub}</option>)}
             </select>
@@ -229,5 +258,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-

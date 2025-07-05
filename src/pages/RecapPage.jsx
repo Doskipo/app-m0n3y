@@ -19,6 +19,7 @@ const MONTHS = [
 ];
 
 export default function RecapPage() {
+
   const today = new Date();
   const currentYear = today.getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);

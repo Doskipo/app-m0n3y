@@ -22,6 +22,7 @@ const COLORS = [
 ];
 
 export default function SummaryDetailPage() {
+
   const { year, month } = useParams();
   const today = new Date();
   const navigate = useNavigate();

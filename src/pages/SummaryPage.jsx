@@ -22,6 +22,7 @@ const COLORS = [
 ];
 
 export default function SummaryPage() {
+  
   const { year, month } = useParams();
   const today = new Date();
 
@@ -31,6 +32,7 @@ export default function SummaryPage() {
   const [expenses, setExpenses] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+
 
   useEffect(() => {
     const fetchData = async () => {

@@ -160,20 +160,25 @@ export default function HomePage() {
           </button>
           {navOpen && (
             <div className="absolute top-12 left-0 bg-white dark:bg-gray-800 text-black dark:text-white shadow-md rounded p-3 z-10">
-              <Link to="/resum" className="block px-3 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">📊 Aquest mes</Link>
-              <Link to="/recap" className="block px-3 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">📅 Recap</Link>
+              <Link to="/resum" className="block px-3 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">Aquest mes</Link>
+              <Link to="/recap" className="block px-3 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">Recap</Link>
             </div>
           )}
         </div>
 
-        <h1 className="text-2xl font-bold text-center">NECSE</h1>
+        <img
+          src="/logo-necse.png"
+          alt="necse"
+          className="h-8 max-w-[120px] object-contain mx-auto"
+        />
+
 
         <button
-          onClick={() => setDarkMode(!darkMode)}
+          onClick={() => alert("Configuració (pendent)")}
           className="text-xl p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
-          title="Canviar tema"
+          title="Configuració"
         >
-          {darkMode ? "☀️" : "🌙"}
+          ⚙️
         </button>
       </div>
 

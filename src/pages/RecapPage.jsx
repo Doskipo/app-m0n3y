@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { getAllExpenses, getAllEarnings } from "../firestoreHelpers";
 import LoadingScreen from "../components/LoadingScreen";
+import useAuth from "../hooks/useAuth";
 
 const MONTHS = [
   "Gener", "Febrer", "Març", "Abril", "Maig", "Juny",
@@ -19,7 +20,7 @@ const MONTHS = [
 ];
 
 export default function RecapPage() {
-
+  const { user } = useAuth();
   const today = new Date();
   const currentYear = today.getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
@@ -30,16 +31,17 @@ export default function RecapPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const exp = await getAllExpenses();
-      const earn = await getAllEarnings();
+      if (!user) return;
+      const exp = await getAllExpenses(user.uid);
+      const earn = await getAllEarnings(user.uid);
       setExpenses(exp);
       setEarnings(earn);
       setLoading(false);
     };
     fetchData();
-  }, []);
+  }, [user]);
 
-  if (loading) return <LoadingScreen />;
+  if (!user || loading) return <LoadingScreen />;
 
   const getMonthData = (monthIdx) => {
     const filteredExpenses = expenses.filter((e) => {

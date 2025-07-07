@@ -7,6 +7,8 @@ import {
 import ConfirmDialog from "../components/ConfirmDialog";
 import LoadingScreen from "../components/LoadingScreen";
 import useDarkMode from "../hooks/useDarkMode";
+import AuthModal from "../components/AuthModal";
+import useAuth from "../hooks/useAuth"; 
 
 export default function HomePage() {
   const [categories, setCategories] = useState([]);
@@ -16,6 +18,9 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [navOpen, setNavOpen] = useState(false);
   const [darkMode, setDarkMode] = useDarkMode();
+  const [authOpen, setAuthOpen] = useState(false);
+  const { user } = useAuth();
+  const [configOpen, setConfigOpen] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -38,10 +43,12 @@ export default function HomePage() {
   };
 
   useEffect(() => {
+    if (!user?.uid) return;
+
     const fetchData = async () => {
-      const catSnap = await getDocs(collection(db, "categories"));
-      const expSnap = await getDocs(collection(db, "expenses"));
-      const earnSnap = await getDocs(collection(db, "earnings"));
+      const catSnap = await getDocs(collection(db, `users/${user.uid}/categories`));
+      const expSnap = await getDocs(collection(db, `users/${user.uid}/expenses`));
+      const earnSnap = await getDocs(collection(db, `users/${user.uid}/earnings`));
 
       const catList = catSnap.docs.map(doc => doc.data());
       setCategories(catList);
@@ -54,7 +61,7 @@ export default function HomePage() {
     };
 
     fetchData();
-  }, []);
+  }, [user]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -67,7 +74,7 @@ export default function HomePage() {
 
     const newEntry = { ...form, date: new Date().toISOString() };
     const coll = isEarning ? "earnings" : "expenses";
-    const docRef = await addDoc(collection(db, coll), newEntry);
+    const docRef = await addDoc(collection(db, `users/${user.uid}/${coll}`), newEntry);
     const withId = { ...newEntry, id: docRef.id };
 
     if (isEarning) setEarnings(prev => [withId, ...prev]);
@@ -78,7 +85,7 @@ export default function HomePage() {
 
   const handleDelete = async (id, type) => {
     askConfirm("Segur que vols eliminar aquest registre?", async () => {
-      await deleteDoc(doc(db, type, id));
+      await deleteDoc(doc(db, `users/${user.uid}/${type}`, id));
       if (type === "expenses") setExpenses(prev => prev.filter(e => e.id !== id));
       else setEarnings(prev => prev.filter(e => e.id !== id));
       setConfirmOpen(false);
@@ -93,7 +100,7 @@ export default function HomePage() {
             ...cat,
             subcategories: cat.subcategories.filter(sub => sub !== subToDelete)
           };
-          setDoc(doc(db, "categories", cat.name), updatedCat);
+          setDoc(doc(db, `users/${user.uid}/categories`, cat.name), updatedCat);
           return updatedCat;
         }
         return cat;
@@ -112,7 +119,7 @@ export default function HomePage() {
     const updated = [...categories, { name: newCat, subcategories: [] }];
     setCategories(updated);
     setSelectedCatName(newCat);
-    await setDoc(doc(db, "categories", newCat), { name: newCat, subcategories: [] });
+    await setDoc(doc(db, `users/${user.uid}/categories`, newCat), { name: newCat, subcategories: [] });
   };
 
   const handleAddSubcategory = async () => {
@@ -122,7 +129,7 @@ export default function HomePage() {
     const updated = categories.map(cat => {
       if (cat.name === selectedCatName && !cat.subcategories.includes(newSub)) {
         const updatedCat = { ...cat, subcategories: [...cat.subcategories, newSub] };
-        setDoc(doc(db, "categories", cat.name), updatedCat);
+        setDoc(doc(db, `users/${user.uid}/categories`, cat.name), updatedCat);
         return updatedCat;
       }
       return cat;
@@ -135,7 +142,7 @@ export default function HomePage() {
       const updated = categories.filter(cat => cat.name !== selectedCatName);
       setCategories(updated);
       setSelectedCatName(updated[0]?.name || "");
-      await deleteDoc(doc(db, "categories", selectedCatName));
+      await deleteDoc(doc(db, `users/${user.uid}/categories`, selectedCatName));
       setConfirmOpen(false);
     });
   };
@@ -173,13 +180,32 @@ export default function HomePage() {
         />
 
 
+        <div className="relative">
         <button
-          onClick={() => alert("Configuració (pendent)")}
+          onClick={() => setConfigOpen(!configOpen)}
           className="text-xl p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
           title="Configuració"
         >
           ⚙️
         </button>
+        {configOpen && (
+          <div className="absolute top-12 right-0 bg-white dark:bg-gray-800 text-black dark:text-white shadow-md rounded p-3 z-10 w-56 text-sm">
+            <p className="mb-2 text-gray-500 dark:text-gray-400">
+              Usuari: {user?.isAnonymous ? "invitado" : user?.email}
+            </p>
+            <button
+              onClick={() => {
+                setConfigOpen(false);
+                setAuthOpen(true);
+              }}
+              className="block w-full text-left px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              Iniciar sessió / Registrar-se
+            </button>
+          </div>
+        )}
+      </div>
+
       </div>
 
       {/* Formulari */}
@@ -260,6 +286,7 @@ export default function HomePage() {
           )}
         </div>
       )}
+    <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </div>
   );
 }

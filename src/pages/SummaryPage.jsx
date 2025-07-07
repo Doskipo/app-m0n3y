@@ -1,6 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getAllExpenses, getAllCategories } from "../firestoreHelpers";
+import useAuth from "../hooks/useAuth";
 import LoadingScreen from "../components/LoadingScreen";
 import {
   PieChart,
@@ -22,7 +23,7 @@ const COLORS = [
 ];
 
 export default function SummaryPage() {
-  
+  const { user } = useAuth();
   const { year, month } = useParams();
   const today = new Date();
 
@@ -33,19 +34,19 @@ export default function SummaryPage() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
-
   useEffect(() => {
+    if (!user) return;
     const fetchData = async () => {
-      const exp = await getAllExpenses();
-      const cats = await getAllCategories();
+      const exp = await getAllExpenses(user.uid);
+      const cats = await getAllCategories(user.uid);
       setExpenses(exp);
       setCategories(cats);
       setLoading(false);
     };
     fetchData();
-  }, []);
+  }, [user]);
 
-  if (loading) return <LoadingScreen />;
+  if (!user || loading) return <LoadingScreen />;
 
   const filteredExpenses = expenses.filter((e) => {
     const date = new Date(e.date);

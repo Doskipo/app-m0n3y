@@ -9,6 +9,8 @@ import LoadingScreen from "../components/LoadingScreen";
 import useDarkMode from "../hooks/useDarkMode";
 import AuthModal from "../components/AuthModal";
 import useAuth from "../hooks/useAuth"; 
+import InputModal from "../components/InputModal";
+
 
 export default function HomePage() {
   const [categories, setCategories] = useState([]);
@@ -21,6 +23,9 @@ export default function HomePage() {
   const [authOpen, setAuthOpen] = useState(false);
   const { user } = useAuth();
   const [configOpen, setConfigOpen] = useState(false);
+  const [inputModalOpen, setInputModalOpen] = useState(false);
+  const [inputModalConfig, setInputModalConfig] = useState({ title: "", placeholder: "", onSubmit: () => {} });
+
 
   const [form, setForm] = useState({
     name: "",
@@ -42,6 +47,12 @@ export default function HomePage() {
     setConfirmOpen(true);
   };
 
+  const openInputModal = ({ title, placeholder, onSubmit }) => {
+    setInputModalConfig({ title, placeholder, onSubmit });
+    setInputModalOpen(true);
+  };
+
+  
   useEffect(() => {
     if (!user?.uid) return;
 
@@ -110,32 +121,50 @@ export default function HomePage() {
     });
   };
 
-  const handleAddCategory = async () => {
-    const newCat = prompt("Nova categoria:");
-    if (!newCat || categories.some(c => c.name === newCat)) {
-      alert("Categoria no vàlida o existent.");
-      return;
-    }
-    const updated = [...categories, { name: newCat, subcategories: [] }];
-    setCategories(updated);
-    setSelectedCatName(newCat);
-    await setDoc(doc(db, `users/${user.uid}/categories`, newCat), { name: newCat, subcategories: [] });
-  };
-
-  const handleAddSubcategory = async () => {
-    const newSub = prompt(`Nova subcategoria per a "${selectedCatName}":`);
-    if (!newSub) return;
-
-    const updated = categories.map(cat => {
-      if (cat.name === selectedCatName && !cat.subcategories.includes(newSub)) {
-        const updatedCat = { ...cat, subcategories: [...cat.subcategories, newSub] };
-        setDoc(doc(db, `users/${user.uid}/categories`, cat.name), updatedCat);
-        return updatedCat;
+  const handleAddCategory = () => {
+    openInputModal({
+      title: "Nova categoria",
+      placeholder: "Nom de la nova categoria",
+      onSubmit: async (newCat) => {
+        if (categories.some(c => c.name === newCat)) {
+          alert("Categoria ja existent.");
+          return;
+        }
+        const updated = [...categories, { name: newCat, subcategories: [] }];
+        setCategories(updated);
+        setSelectedCatName(newCat);
+        await setDoc(doc(db, `users/${user.uid}/categories`, newCat), {
+          name: newCat,
+          subcategories: [],
+        });
+        setInputModalOpen(false);
       }
-      return cat;
     });
-    setCategories(updated);
   };
+
+
+  const handleAddSubcategory = () => {
+    openInputModal({
+      title: `Nova subcategoria per a "${selectedCatName}"`,
+      placeholder: "Nom de la nova subcategoria",
+      onSubmit: async (newSub) => {
+        const updated = categories.map(cat => {
+          if (cat.name === selectedCatName && !cat.subcategories.includes(newSub)) {
+            const updatedCat = {
+              ...cat,
+              subcategories: [...cat.subcategories, newSub]
+            };
+            setDoc(doc(db, `users/${user.uid}/categories`, cat.name), updatedCat);
+            return updatedCat;
+          }
+          return cat;
+        });
+        setCategories(updated);
+        setInputModalOpen(false);
+      }
+    });
+  };
+
 
   const handleDeleteCategory = () => {
     askConfirm(`Eliminar la categoria "${selectedCatName}"?`, async () => {
@@ -287,6 +316,13 @@ export default function HomePage() {
         </div>
       )}
     <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+    <InputModal
+      open={inputModalOpen}
+      title={inputModalConfig.title}
+      placeholder={inputModalConfig.placeholder}
+      onClose={() => setInputModalOpen(false)}
+      onSubmit={inputModalConfig.onSubmit}
+    />
     </div>
   );
 }

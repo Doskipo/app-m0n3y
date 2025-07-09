@@ -80,7 +80,7 @@ export default function SummaryPage() {
     <div className="max-w-md mx-auto p-4">
       <Link
         to="/"
-        className="absolute top-4 left-4 bg-gray-200 text-gray-800 px-3 py-1 rounded hover:bg-gray-300 transition text-sm"
+        className="inline-block mb-4 bg-gray-200 text-gray-800 px-3 py-1 rounded hover:bg-gray-300 transition text-sm"
       >
         ← Inici
       </Link>

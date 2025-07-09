@@ -81,10 +81,11 @@ export default function SummaryDetailPage() {
     <div className="max-w-md mx-auto p-4">
       <button
         onClick={() => navigate(-1)}
-        className="absolute top-4 left-4 bg-gray-200 text-gray-800 px-3 py-1 rounded hover:bg-gray-300 transition text-sm"
+        className="inline-block mb-4 bg-gray-200 text-gray-800 px-3 py-1 rounded hover:bg-gray-300 transition text-sm"
       >
         ← Enrere
       </button>
+
 
       <h1 className="text-2xl font-bold mb-2 text-center">📊 Resum de despeses</h1>
       <p className="text-center text-sm text-gray-500 mb-4">

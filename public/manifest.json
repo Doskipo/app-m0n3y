@@ -1,0 +1,23 @@
+{
+  "name": "NECSE",
+  "short_name": "NECSE",
+  "description": "App de finances personals",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "lang": "ca",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/necse/Icon_Necse_WhiteTheme_192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/necse/Icon_Necse_WhiteTheme_512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

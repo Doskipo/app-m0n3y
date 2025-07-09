@@ -202,12 +202,6 @@ export default function HomePage() {
           )}
         </div>
 
-        <img
-          src="/logo-necse.png"
-          alt="necse"
-          className="h-8 max-w-[120px] object-contain mx-auto"
-        />
-
 
         <div className="relative">
         <button

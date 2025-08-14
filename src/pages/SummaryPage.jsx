@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { getAllExpenses, getAllCategories } from "../firestoreHelpers";
 import useAuth from "../hooks/useAuth";
 import LoadingScreen from "../components/LoadingScreen";
@@ -33,7 +33,7 @@ export default function SummaryPage() {
   const [expenses, setExpenses] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [openCat, setOpenCat] = useState(null); // <- categoria desplegada
+  const [openCat, setOpenCat] = useState(null); // categoria desplegada
 
   useEffect(() => {
     if (!user) return;
@@ -64,9 +64,8 @@ export default function SummaryPage() {
 
   const totalPerCat = {};
   const totalPerSub = {};
-
-  // Index d'items per categoria (del mes seleccionat)
   const itemsByCat = {};
+
   filteredExpenses.forEach((e) => {
     const cat = e.category || "(Sense categoria)";
     const sub = e.subcategory || "(Sense subcategoria)";
@@ -85,22 +84,35 @@ export default function SummaryPage() {
     value: parseFloat(value.toFixed(2))
   }));
 
-  // Helper de format de data curt
   const fmtDate = (d) => {
     const dt = new Date(d);
     if (isNaN(dt)) return "";
     return dt.toLocaleDateString("ca-ES", { day: "2-digit", month: "short" });
   };
 
-  // Per garantir “de més car a més barat”: ordre descendent per import
+  // Obtenir un “concepte” robust de l’ítem, segons com es guardi
+  const getConcept = (it) => {
+    const fields = [
+      "concept", "concepte", "concepto",
+      "title", "name", "label",
+      "merchant", "payee",
+      "notes", "note", "description",
+      "memo", "text"
+    ];
+    for (const f of fields) {
+      const v = it?.[f];
+      if (typeof v === "string" && v.trim()) return v.trim();
+    }
+    return "(Sense concepte)";
+  };
+
+  // Ordenar de més car a més barat (desc per import)
   const getSortedItemsForCat = (catName) => {
     const list = itemsByCat[catName] || [];
     return [...list].sort((a, b) => {
       const A = parseFloat(a.amount || 0);
       const B = parseFloat(b.amount || 0);
-      // Si al teu model els ingressos també poden aparèixer aquí, volem més “cost” primer.
-      // Assumim que a SummaryPage només tens despeses positives; si no, usa Math.abs():
-      return B - A; // o: Math.abs(B) - Math.abs(A)
+      return B - A; // si tens imports negatius, usa: Math.abs(B) - Math.abs(A)
     });
   };
 
@@ -153,10 +165,10 @@ export default function SummaryPage() {
                 </div>
               </button>
 
-              {/* Subcategories (resum) */}
-              <div className="space-y-1 ml-2 text-sm">
-                {cat.subcategories.length > 0 ? (
-                  cat.subcategories.map((sub, j) => {
+              {/* Subcategories (només si n'hi ha) */}
+              {Array.isArray(cat.subcategories) && cat.subcategories.length > 0 && (
+                <div className="space-y-1 ml-2 text-sm">
+                  {cat.subcategories.map((sub, j) => {
                     const key = `${catName}|||${sub}`;
                     const subTotal = totalPerSub[key] || 0;
                     const percentLocal = catTotal > 0 ? ((subTotal / catTotal) * 100).toFixed(0) : "0";
@@ -169,11 +181,9 @@ export default function SummaryPage() {
                         </div>
                       </div>
                     );
-                  })
-                ) : (
-                  <p className="italic text-gray-400">– (Sense subcategories)</p>
-                )}
-              </div>
+                  })}
+                </div>
+              )}
 
               {/* Panell d’items desplegable, amb límit d’alçada i scroll intern */}
               <div
@@ -183,14 +193,16 @@ export default function SummaryPage() {
                   <ul className="divide-y rounded-lg bg-gray-50 dark:bg-gray-900/30 max-h-56 overflow-y-auto">
                     {getSortedItemsForCat(catName).map((it, k) => {
                       const amount = parseFloat(it.amount || 0);
-                      const concept = it.note || it.description || it.concept || "(Sense concepte)";
-                      const sub = it.subcategory || "(Sense subcategoria)";
+                      const concept = getConcept(it);
+                      const rawSub = (it.subcategory ?? "").toString().trim();
+                      const hasSub = rawSub.length > 0;
+
                       return (
                         <li key={k} className="flex items-start justify-between p-2">
                           <div className="pr-3">
                             <p className="font-medium leading-tight">{concept}</p>
                             <p className="text-xs text-gray-500">
-                              {fmtDate(it.date)} • {sub}
+                              {fmtDate(it.date)}{hasSub ? ` • ${rawSub}` : ""}
                             </p>
                           </div>
                           <div className="text-right tabular-nums font-semibold">

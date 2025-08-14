@@ -34,6 +34,7 @@ export default function SummaryDetailPage() {
   const [expenses, setExpenses] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [openCat, setOpenCat] = useState(null); // categoria desplegada
 
   useEffect(() => {
     if (!user) return;
@@ -46,6 +47,9 @@ export default function SummaryDetailPage() {
     };
     fetchData();
   }, [user]);
+
+  // Tancar desplegables quan canviem de mes/any
+  useEffect(() => { setOpenCat(null); }, [selectedYear, selectedMonth]);
 
   if (!user || loading) return <LoadingScreen />;
 
@@ -61,21 +65,58 @@ export default function SummaryDetailPage() {
 
   const totalPerCat = {};
   const totalPerSub = {};
+  const itemsByCat = {};
 
   filteredExpenses.forEach((e) => {
-    const cat = e.category;
+    const cat = e.category || "(Sense categoria)";
     const sub = e.subcategory || "(Sense subcategoria)";
     const amt = parseFloat(e.amount || 0);
 
     totalPerCat[cat] = (totalPerCat[cat] || 0) + amt;
     const key = `${cat}|||${sub}`;
     totalPerSub[key] = (totalPerSub[key] || 0) + amt;
+
+    if (!itemsByCat[cat]) itemsByCat[cat] = [];
+    itemsByCat[cat].push(e);
   });
 
   const pieData = Object.entries(totalPerCat).map(([name, value]) => ({
     name,
     value: parseFloat(value.toFixed(2))
   }));
+
+  // Format curt de data
+  const fmtDate = (d) => {
+    const dt = new Date(d);
+    if (isNaN(dt)) return "";
+    return dt.toLocaleDateString("ca-ES", { day: "2-digit", month: "short" });
+  };
+
+  // Concepte robust
+  const getConcept = (it) => {
+    const fields = [
+      "concept", "concepte", "concepto",
+      "title", "name", "label",
+      "merchant", "payee",
+      "notes", "note", "description",
+      "memo", "text"
+    ];
+    for (const f of fields) {
+      const v = it?.[f];
+      if (typeof v === "string" && v.trim()) return v.trim();
+    }
+    return "(Sense concepte)";
+  };
+
+  // Ordenar ítems: de més car a més barat
+  const getSortedItemsForCat = (catName) => {
+    const list = itemsByCat[catName] || [];
+    return [...list].sort((a, b) => {
+      const A = parseFloat(a.amount || 0);
+      const B = parseFloat(b.amount || 0);
+      return B - A; // si tens imports negatius, usa Math.abs(B) - Math.abs(A)
+    });
+  };
 
   return (
     <div className="max-w-md mx-auto p-4">
@@ -85,7 +126,6 @@ export default function SummaryDetailPage() {
       >
         ← Enrere
       </button>
-
 
       <h1 className="text-2xl font-bold mb-2 text-center">📊 Resum de despeses</h1>
       <p className="text-center text-sm text-gray-500 mb-4">
@@ -99,23 +139,39 @@ export default function SummaryDetailPage() {
 
       <div className="space-y-6 mb-8">
         {categories.map((cat, i) => {
-          const catTotal = totalPerCat[cat.name] || 0;
+          const catName = cat.name;
+          const catTotal = totalPerCat[catName] || 0;
           const percentGlobal = total > 0 ? ((catTotal / total) * 100).toFixed(0) : "0";
+          const isOpen = openCat === catName;
 
           return (
             <div key={i} className="bg-white shadow p-4 rounded-lg border">
-              <div className="flex justify-between items-center mb-2">
-                <h2 className="font-bold text-lg text-gray-800">{cat.name}</h2>
+              {/* Capçalera clicable de la categoria */}
+              <button
+                type="button"
+                onClick={() => setOpenCat(isOpen ? null : catName)}
+                className="w-full flex justify-between items-center mb-2"
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`inline-block transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`}
+                    aria-hidden
+                  >
+                    ▸
+                  </span>
+                  <h2 className="font-bold text-lg text-gray-800 text-left">{catName}</h2>
+                </div>
                 <div className="text-right">
                   <p className="text-gray-700 font-semibold text-base">{catTotal.toFixed(2)} €</p>
                   <p className="text-xs text-gray-500">{percentGlobal}%</p>
                 </div>
-              </div>
+              </button>
 
-              <div className="space-y-1 ml-2 text-sm">
-                {cat.subcategories.length > 0 ? (
-                  cat.subcategories.map((sub, j) => {
-                    const key = `${cat.name}|||${sub}`;
+              {/* Subcategories (només si n'hi ha) */}
+              {Array.isArray(cat.subcategories) && cat.subcategories.length > 0 && (
+                <div className="space-y-1 ml-2 text-sm">
+                  {cat.subcategories.map((sub, j) => {
+                    const key = `${catName}|||${sub}`;
                     const subTotal = totalPerSub[key] || 0;
                     const percentLocal = catTotal > 0 ? ((subTotal / catTotal) * 100).toFixed(0) : "0";
                     return (
@@ -127,10 +183,41 @@ export default function SummaryDetailPage() {
                         </div>
                       </div>
                     );
-                  })
-                ) : (
-                  <p className="italic text-gray-400">– (Sense subcategories)</p>
-                )}
+                  })}
+                </div>
+              )}
+
+              {/* Panell d’items desplegable, amb límit d’alçada i scroll intern */}
+              <div
+                className={`transition-[grid-template-rows] duration-200 ease-out overflow-hidden mt-3 ${isOpen ? "grid grid-rows-[1fr]" : "grid grid-rows-[0fr]"}`}
+              >
+                <div className="min-h-0">
+                  <ul className="divide-y rounded-lg bg-gray-50 dark:bg-gray-900/30 max-h-56 overflow-y-auto">
+                    {getSortedItemsForCat(catName).map((it, k) => {
+                      const amount = parseFloat(it.amount || 0);
+                      const concept = getConcept(it);
+                      const rawSub = (it.subcategory ?? "").toString().trim();
+                      const hasSub = rawSub.length > 0;
+
+                      return (
+                        <li key={k} className="flex items-start justify-between p-2">
+                          <div className="pr-3">
+                            <p className="font-medium leading-tight">{concept}</p>
+                            <p className="text-xs text-gray-500">
+                              {fmtDate(it.date)}{hasSub ? ` • ${rawSub}` : ""}
+                            </p>
+                          </div>
+                          <div className="text-right tabular-nums font-semibold">
+                            {amount.toFixed(2)} €
+                          </div>
+                        </li>
+                      );
+                    })}
+                    {(!itemsByCat[catName] || itemsByCat[catName].length === 0) && (
+                      <li className="p-3 text-sm text-gray-500 italic">No hi ha moviments en aquesta categoria.</li>
+                    )}
+                  </ul>
+                </div>
               </div>
             </div>
           );
@@ -152,7 +239,7 @@ export default function SummaryDetailPage() {
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => `${value.toFixed(2)} €`} />
+              <Tooltip formatter={(value) => `${Number(value).toFixed(2)} €`} />
               <Legend layout="horizontal" verticalAlign="bottom" align="center" />
             </PieChart>
           </ResponsiveContainer>

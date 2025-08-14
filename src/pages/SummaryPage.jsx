@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getAllExpenses, getAllCategories } from "../firestoreHelpers";
 import useAuth from "../hooks/useAuth";
 import LoadingScreen from "../components/LoadingScreen";
@@ -33,6 +33,7 @@ export default function SummaryPage() {
   const [expenses, setExpenses] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [openCat, setOpenCat] = useState(null); // <- categoria desplegada
 
   useEffect(() => {
     if (!user) return;
@@ -45,6 +46,9 @@ export default function SummaryPage() {
     };
     fetchData();
   }, [user]);
+
+  // Tancar desplegables quan canviem de mes/any
+  useEffect(() => { setOpenCat(null); }, [selectedYear, selectedMonth]);
 
   if (!user || loading) return <LoadingScreen />;
 
@@ -61,20 +65,44 @@ export default function SummaryPage() {
   const totalPerCat = {};
   const totalPerSub = {};
 
+  // Index d'items per categoria (del mes seleccionat)
+  const itemsByCat = {};
   filteredExpenses.forEach((e) => {
-    const cat = e.category;
+    const cat = e.category || "(Sense categoria)";
     const sub = e.subcategory || "(Sense subcategoria)";
     const amt = parseFloat(e.amount || 0);
 
     totalPerCat[cat] = (totalPerCat[cat] || 0) + amt;
     const key = `${cat}|||${sub}`;
     totalPerSub[key] = (totalPerSub[key] || 0) + amt;
+
+    if (!itemsByCat[cat]) itemsByCat[cat] = [];
+    itemsByCat[cat].push(e);
   });
 
   const pieData = Object.entries(totalPerCat).map(([name, value]) => ({
     name,
     value: parseFloat(value.toFixed(2))
   }));
+
+  // Helper de format de data curt
+  const fmtDate = (d) => {
+    const dt = new Date(d);
+    if (isNaN(dt)) return "";
+    return dt.toLocaleDateString("ca-ES", { day: "2-digit", month: "short" });
+  };
+
+  // Per garantir “de més car a més barat”: ordre descendent per import
+  const getSortedItemsForCat = (catName) => {
+    const list = itemsByCat[catName] || [];
+    return [...list].sort((a, b) => {
+      const A = parseFloat(a.amount || 0);
+      const B = parseFloat(b.amount || 0);
+      // Si al teu model els ingressos també poden aparèixer aquí, volem més “cost” primer.
+      // Assumim que a SummaryPage només tens despeses positives; si no, usa Math.abs():
+      return B - A; // o: Math.abs(B) - Math.abs(A)
+    });
+  };
 
   return (
     <div className="max-w-md mx-auto p-4">
@@ -97,23 +125,39 @@ export default function SummaryPage() {
 
       <div className="space-y-6 mb-8">
         {categories.map((cat, i) => {
-          const catTotal = totalPerCat[cat.name] || 0;
+          const catName = cat.name;
+          const catTotal = totalPerCat[catName] || 0;
           const percentGlobal = total > 0 ? ((catTotal / total) * 100).toFixed(0) : "0";
+          const isOpen = openCat === catName;
 
           return (
             <div key={i} className="bg-white shadow p-4 rounded-lg border">
-              <div className="flex justify-between items-center mb-2">
-                <h2 className="font-bold text-lg text-gray-800">{cat.name}</h2>
+              {/* Capçalera clicable de la categoria */}
+              <button
+                type="button"
+                onClick={() => setOpenCat(isOpen ? null : catName)}
+                className="w-full flex justify-between items-center mb-2"
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`inline-block transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`}
+                    aria-hidden
+                  >
+                    ▸
+                  </span>
+                  <h2 className="font-bold text-lg text-gray-800 text-left">{catName}</h2>
+                </div>
                 <div className="text-right">
                   <p className="text-gray-700 font-semibold text-base">{catTotal.toFixed(2)} €</p>
                   <p className="text-xs text-gray-500">{percentGlobal}%</p>
                 </div>
-              </div>
+              </button>
 
+              {/* Subcategories (resum) */}
               <div className="space-y-1 ml-2 text-sm">
                 {cat.subcategories.length > 0 ? (
                   cat.subcategories.map((sub, j) => {
-                    const key = `${cat.name}|||${sub}`;
+                    const key = `${catName}|||${sub}`;
                     const subTotal = totalPerSub[key] || 0;
                     const percentLocal = catTotal > 0 ? ((subTotal / catTotal) * 100).toFixed(0) : "0";
                     return (
@@ -129,6 +173,37 @@ export default function SummaryPage() {
                 ) : (
                   <p className="italic text-gray-400">– (Sense subcategories)</p>
                 )}
+              </div>
+
+              {/* Panell d’items desplegable, amb límit d’alçada i scroll intern */}
+              <div
+                className={`transition-[grid-template-rows] duration-200 ease-out overflow-hidden mt-3 ${isOpen ? "grid grid-rows-[1fr]" : "grid grid-rows-[0fr]"}`}
+              >
+                <div className="min-h-0">
+                  <ul className="divide-y rounded-lg bg-gray-50 dark:bg-gray-900/30 max-h-56 overflow-y-auto">
+                    {getSortedItemsForCat(catName).map((it, k) => {
+                      const amount = parseFloat(it.amount || 0);
+                      const concept = it.note || it.description || it.concept || "(Sense concepte)";
+                      const sub = it.subcategory || "(Sense subcategoria)";
+                      return (
+                        <li key={k} className="flex items-start justify-between p-2">
+                          <div className="pr-3">
+                            <p className="font-medium leading-tight">{concept}</p>
+                            <p className="text-xs text-gray-500">
+                              {fmtDate(it.date)} • {sub}
+                            </p>
+                          </div>
+                          <div className="text-right tabular-nums font-semibold">
+                            {amount.toFixed(2)} €
+                          </div>
+                        </li>
+                      );
+                    })}
+                    {(!itemsByCat[catName] || itemsByCat[catName].length === 0) && (
+                      <li className="p-3 text-sm text-gray-500 italic">No hi ha moviments en aquesta categoria.</li>
+                    )}
+                  </ul>
+                </div>
               </div>
             </div>
           );
@@ -150,7 +225,7 @@ export default function SummaryPage() {
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => `${value.toFixed(2)} €`} />
+              <Tooltip formatter={(value) => `${Number(value).toFixed(2)} €`} />
               <Legend layout="horizontal" verticalAlign="bottom" align="center" />
             </PieChart>
           </ResponsiveContainer>
